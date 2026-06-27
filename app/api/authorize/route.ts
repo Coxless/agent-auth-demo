@@ -3,7 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { USERS, CLIENT_ID, SCOPE, allowedRedirectUri, resourceUrl } from "@/lib/config";
-import { createAuthCode } from "@/lib/store";
+import { createAuthCode } from "@/lib/authcode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
   if (codeChallengeMethod !== "S256" || !codeChallenge)
     return errorRedirect(redirectUri, state, "invalid_request", "PKCE S256 required");
 
-  const code = createAuthCode({
+  const code = await createAuthCode({
     sub: user.sub,
     role: user.role,
     codeChallenge,
