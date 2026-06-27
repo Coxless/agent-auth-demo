@@ -1,0 +1,4 @@
+[tools]
+node = "22"
+bun = "latest"
+"npm:pnpm" = "latest"

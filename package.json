@@ -1,0 +1,28 @@
+{
+  "name": "agent-auth-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WebLLM agent x MCP resource server x Cedar dynamic authorization — learning demo (single Next.js app)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@cedar-policy/cedar-wasm": "^4.11.2",
+    "@mlc-ai/web-llm": "^0.2.84",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "jose": "^6.2.3",
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}

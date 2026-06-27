@@ -1,0 +1,4 @@
+allowBuilds:
+  # sharp is an optional Next.js image-optimization dependency we don't use.
+  # Skip its native build script (it would also need to fetch a prebuilt binary).
+  sharp: false

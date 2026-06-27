@@ -1,0 +1,28 @@
+{
+  "": {
+    "entityTypes": {
+      "User": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "role": { "type": "String" }
+          }
+        }
+      },
+      "Record": {
+        "shape": { "type": "Record", "attributes": {} }
+      }
+    },
+    "actions": {
+      "readRecord": {
+        "appliesTo": { "principalTypes": ["User"], "resourceTypes": ["Record"] }
+      },
+      "writeRecord": {
+        "appliesTo": { "principalTypes": ["User"], "resourceTypes": ["Record"] }
+      },
+      "deleteRecord": {
+        "appliesTo": { "principalTypes": ["User"], "resourceTypes": ["Record"] }
+      }
+    }
+  }
+}
