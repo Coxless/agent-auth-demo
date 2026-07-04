@@ -3,7 +3,7 @@
 
 import { jsonResponse, corsPreflight } from "@/lib/http";
 import { CLIENT_ID, issuer, resourceUrl } from "@/lib/config";
-import { consumeAuthCode } from "@/lib/store";
+import { consumeAuthCode } from "@/lib/authcode";
 import { verifyPkceS256 } from "@/lib/pkce";
 import { signAccessToken } from "@/lib/jwt";
 
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   if (!code) return tokenError("invalid_request", "missing code");
   if (!codeVerifier) return tokenError("invalid_request", "missing code_verifier (PKCE required)");
 
-  const stored = consumeAuthCode(code);
+  const stored = await consumeAuthCode(code);
   if (!stored) return tokenError("invalid_grant", "code invalid, expired, or already used");
   if (stored.redirectUri !== redirectUri)
     return tokenError("invalid_grant", "redirect_uri mismatch");

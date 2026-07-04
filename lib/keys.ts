@@ -38,14 +38,10 @@ async function build(): Promise<SigningMaterial> {
     const jwk = JSON.parse(envPrivate) as JWK;
     const kid = process.env.SIGNING_KID || jwk.kid || "as-key-1";
     const privateKey = (await importJWK({ ...jwk, alg: ALG }, ALG)) as SigningKey;
-    const pub = await exportJWK(privateKey);
-    delete (pub as JWK).d;
-    delete (pub as JWK).p;
-    delete (pub as JWK).q;
-    delete (pub as JWK).dp;
-    delete (pub as JWK).dq;
-    delete (pub as JWK).qi;
-    const publicJwk: JWK = { ...pub, kid, alg: ALG, use: "sig" };
+    // Derive the public JWK from the supplied private JWK directly. We cannot
+    // re-export from `privateKey` because importJWK produces a non-extractable
+    // CryptoKey (signing-only), and exportJWK on it throws.
+    const publicJwk: JWK = { kty: jwk.kty, n: jwk.n, e: jwk.e, kid, alg: ALG, use: "sig" };
     return { kid, alg: ALG, privateKey, publicJwk };
   }
 
