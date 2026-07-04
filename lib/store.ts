@@ -51,3 +51,7 @@ export function deleteRecord(id: string): boolean {
 export function listRecordIds(): string[] {
   return [...stores().records.keys()];
 }
+
+export function listRecords(): RecordItem[] {
+  return [...stores().records.values()].sort((a, b) => a.id.localeCompare(b.id));
+}
