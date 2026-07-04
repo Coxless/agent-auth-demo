@@ -256,8 +256,8 @@ export default function Home() {
       </div>
 
       <div className="grid">
-        {/* Left: flow log */}
-        <div>
+        {/* Column 1: flow log */}
+        <div className="col">
           <div className="panel">
             <h2>OAuth / MCP フローログ</h2>
             <div className="flowlog">
@@ -277,8 +277,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right: DB viewer + operations */}
-        <div>
+        {/* Column 2: DB viewer */}
+        <div className="col">
           <div className="panel">
             <div className="panelhead">
               <h2>DB の内容（レコードストア）</h2>
@@ -308,97 +308,102 @@ export default function Home() {
               </div>
             )}
           </div>
+        </div>
 
+        {/* Column 3: operations */}
+        <div className="col">
           <div className="panel">
             <h2>操作パネル（手動ツール / エージェント）</h2>
-            {!token && <p className="muted">先にログインしてください。</p>}
-            {token && (
-              <>
-              <h3 className="subhead">手動ツール実行（フォールバック）</h3>
-              <div className="toolgrid">
-                <div className="row">
-                  <label>record id</label>
-                  <input style={{ width: 120 }} value={recordId} onChange={(e) => setRecordId(e.target.value)} />
+            <div className="panel-scroll">
+              {!token && <p className="muted">先にログインしてください。</p>}
+              {token && (
+                <>
+                <h3 className="subhead">手動ツール実行（フォールバック）</h3>
+                <div className="toolgrid">
+                  <div className="row">
+                    <label>record id</label>
+                    <input style={{ width: 120 }} value={recordId} onChange={(e) => setRecordId(e.target.value)} />
+                  </div>
+                  <div className="row">
+                    <button onClick={() => runTool("readRecord", { id: recordId })}>readRecord</button>
+                    <button
+                      onClick={() => {
+                        let data: unknown = {};
+                        try {
+                          data = JSON.parse(writeData);
+                        } catch {
+                          data = { raw: writeData };
+                        }
+                        runTool("writeRecord", { id: recordId, data });
+                      }}
+                    >
+                      writeRecord
+                    </button>
+                    <button className="danger" onClick={() => runTool("deleteRecord", { id: recordId })}>
+                      deleteRecord
+                    </button>
+                  </div>
+                  <div>
+                    <label>writeRecord data (JSON)</label>
+                    <textarea rows={2} value={writeData} onChange={(e) => setWriteData(e.target.value)} />
+                  </div>
+                  <table className="matrix">
+                    <thead>
+                      <tr>
+                        <th>role</th>
+                        <th>read</th>
+                        <th>write</th>
+                        <th>delete</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td className="role">admin</td><td>✅</td><td>✅</td><td>✅</td></tr>
+                      <tr><td className="role">editor</td><td>✅</td><td>✅</td><td>❌</td></tr>
+                      <tr><td className="role">viewer</td><td>✅</td><td>❌</td><td>❌</td></tr>
+                    </tbody>
+                  </table>
                 </div>
-                <div className="row">
-                  <button onClick={() => runTool("readRecord", { id: recordId })}>readRecord</button>
-                  <button
-                    onClick={() => {
-                      let data: unknown = {};
-                      try {
-                        data = JSON.parse(writeData);
-                      } catch {
-                        data = { raw: writeData };
-                      }
-                      runTool("writeRecord", { id: recordId, data });
-                    }}
-                  >
-                    writeRecord
-                  </button>
-                  <button className="danger" onClick={() => runTool("deleteRecord", { id: recordId })}>
-                    deleteRecord
-                  </button>
-                </div>
-                <div>
-                  <label>writeRecord data (JSON)</label>
-                  <textarea rows={2} value={writeData} onChange={(e) => setWriteData(e.target.value)} />
-                </div>
-                <table className="matrix">
-                  <thead>
-                    <tr>
-                      <th>role</th>
-                      <th>read</th>
-                      <th>write</th>
-                      <th>delete</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td className="role">admin</td><td>✅</td><td>✅</td><td>✅</td></tr>
-                    <tr><td className="role">editor</td><td>✅</td><td>✅</td><td>❌</td></tr>
-                    <tr><td className="role">viewer</td><td>✅</td><td>❌</td><td>❌</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              </>
-            )}
+                </>
+              )}
 
-            <h3 className="subhead agenthead">WebLLM エージェント</h3>
-            {!hasWebGPU && (
-              <p className="muted">
-                ⚠ この環境では WebGPU が利用できません。エージェントは動かせませんが、上の手動ツールで認可フローは体験できます。
-              </p>
-            )}
-            <div className="row" style={{ marginBottom: 8 }}>
-              <button onClick={loadModel} disabled={!hasWebGPU || modelLoading || !!engine}>
-                {engine ? "モデル読込済み" : modelLoading ? "読み込み中…" : "モデルをロード"}
-              </button>
-              <span className="muted">{modelStatus}</span>
-            </div>
-            {engine && token && (
-              <div className="chat">
-                <div className="messages">
-                  {chat.map((m, i) => (
-                    <div key={i} className={`msg ${m.who}`}>
-                      <div className="who">{m.who}</div>
-                      <pre>{m.text}</pre>
-                    </div>
-                  ))}
-                </div>
-                <div className="row">
-                  <input
-                    style={{ flex: 1 }}
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !agentBusy && sendChat()}
-                    placeholder="例: r1 を読んで / r2 を削除して"
-                  />
-                  <button className="primary" onClick={sendChat} disabled={agentBusy}>
-                    送信
-                  </button>
-                </div>
+              <h3 className="subhead agenthead">WebLLM エージェント</h3>
+              {!hasWebGPU && (
+                <p className="muted">
+                  ⚠ この環境では WebGPU が利用できません。エージェントは動かせませんが、上の手動ツールで認可フローは体験できます。
+                </p>
+              )}
+              <div className="row" style={{ marginBottom: 8 }}>
+                <button onClick={loadModel} disabled={!hasWebGPU || modelLoading || !!engine}>
+                  {engine ? "モデル読込済み" : modelLoading ? "読み込み中…" : "モデルをロード"}
+                </button>
+                <span className="muted">{modelStatus}</span>
               </div>
-            )}
-            {engine && !token && <p className="muted">ログインするとエージェントが MCP を呼べます。</p>}
+              {engine && token && (
+                <div className="chat">
+                  <div className="messages">
+                    {chat.map((m, i) => (
+                      <div key={i} className={`msg ${m.who}`}>
+                        <div className="who">{m.who}</div>
+                        <pre>{m.text}</pre>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="row">
+                    <input
+                      style={{ flex: 1 }}
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !agentBusy && sendChat()}
+                      placeholder="例: r1 を読んで / r2 を削除して"
+                    />
+                    <button className="primary" onClick={sendChat} disabled={agentBusy}>
+                      送信
+                    </button>
+                  </div>
+                </div>
+              )}
+              {engine && !token && <p className="muted">ログインするとエージェントが MCP を呼べます。</p>}
+            </div>
           </div>
         </div>
       </div>
