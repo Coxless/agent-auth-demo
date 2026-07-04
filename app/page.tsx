@@ -24,6 +24,16 @@ interface ChatMsg {
 }
 
 const TOKEN_KEY = "access_token";
+const LOG_KEY = "oauth_flow_log";
+
+function loadPersistedLog(): LogEntry[] {
+  try {
+    const raw = sessionStorage.getItem(LOG_KEY);
+    return raw ? (JSON.parse(raw) as LogEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 export default function Home() {
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -45,7 +55,11 @@ export default function Home() {
   const hasWebGPU = typeof navigator !== "undefined" && "gpu" in navigator;
 
   const addLog = useCallback((step: string, status: LogStatus, detail?: unknown) => {
-    setLog((prev) => [...prev, { step, status, detail, time: new Date().toLocaleTimeString() }]);
+    setLog((prev) => {
+      const next = [...prev, { step, status, detail, time: new Date().toLocaleTimeString() }];
+      sessionStorage.setItem(LOG_KEY, JSON.stringify(next));
+      return next;
+    });
   }, []);
 
   const mcpUrl = () => window.location.origin + "/mcp";
@@ -72,6 +86,7 @@ export default function Home() {
   );
 
   useEffect(() => {
+    setLog(loadPersistedLog());
     (async () => {
       const result = await completeLoginIfCallback(addLog);
       if (result) {
@@ -95,6 +110,7 @@ export default function Home() {
   const handleLogin = async () => {
     try {
       setLog([]);
+      sessionStorage.removeItem(LOG_KEY);
       const disc = await discover(mcpUrl(), addLog);
       await beginLogin(disc, addLog);
     } catch (e) {
