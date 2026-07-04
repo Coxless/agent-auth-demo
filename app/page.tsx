@@ -50,6 +50,7 @@ export default function Home() {
 
   const [recordId, setRecordId] = useState("r1");
   const [writeData, setWriteData] = useState('{"title":"updated","note":"from manual UI"}');
+  const [opMode, setOpMode] = useState<"manual" | "agent">("manual");
 
   // DB viewer state
   const [dbRecords, setDbRecords] = useState<DbRecord[]>([]);
@@ -313,10 +314,24 @@ export default function Home() {
         {/* Column 3: operations */}
         <div className="col">
           <div className="panel">
-            <h2>操作パネル（手動ツール / エージェント）</h2>
+            <h2>操作パネル</h2>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button
+                className={opMode === "manual" ? "primary" : ""}
+                onClick={() => setOpMode("manual")}
+              >
+                手動ツール
+              </button>
+              <button
+                className={opMode === "agent" ? "primary" : ""}
+                onClick={() => setOpMode("agent")}
+              >
+                エージェント
+              </button>
+            </div>
             <div className="panel-scroll">
               {!token && <p className="muted">先にログインしてください。</p>}
-              {token && (
+              {token && opMode === "manual" && (
                 <>
                 <h3 className="subhead">手動ツール実行（フォールバック）</h3>
                 <div className="toolgrid">
@@ -347,62 +362,51 @@ export default function Home() {
                     <label>writeRecord data (JSON)</label>
                     <textarea rows={2} value={writeData} onChange={(e) => setWriteData(e.target.value)} />
                   </div>
-                  <table className="matrix">
-                    <thead>
-                      <tr>
-                        <th>role</th>
-                        <th>read</th>
-                        <th>write</th>
-                        <th>delete</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr><td className="role">admin</td><td>✅</td><td>✅</td><td>✅</td></tr>
-                      <tr><td className="role">editor</td><td>✅</td><td>✅</td><td>❌</td></tr>
-                      <tr><td className="role">viewer</td><td>✅</td><td>❌</td><td>❌</td></tr>
-                    </tbody>
-                  </table>
                 </div>
                 </>
               )}
 
-              <h3 className="subhead agenthead">WebLLM エージェント</h3>
-              {!hasWebGPU && (
-                <p className="muted">
-                  ⚠ この環境では WebGPU が利用できません。エージェントは動かせませんが、上の手動ツールで認可フローは体験できます。
-                </p>
-              )}
-              <div className="row" style={{ marginBottom: 8 }}>
-                <button onClick={loadModel} disabled={!hasWebGPU || modelLoading || !!engine}>
-                  {engine ? "モデル読込済み" : modelLoading ? "読み込み中…" : "モデルをロード"}
-                </button>
-                <span className="muted">{modelStatus}</span>
-              </div>
-              {engine && token && (
-                <div className="chat">
-                  <div className="messages">
-                    {chat.map((m, i) => (
-                      <div key={i} className={`msg ${m.who}`}>
-                        <div className="who">{m.who}</div>
-                        <pre>{m.text}</pre>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="row">
-                    <input
-                      style={{ flex: 1 }}
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && !agentBusy && sendChat()}
-                      placeholder="例: r1 を読んで / r2 を削除して"
-                    />
-                    <button className="primary" onClick={sendChat} disabled={agentBusy}>
-                      送信
-                    </button>
-                  </div>
+              {opMode === "agent" && (
+                <>
+                <h3 className="subhead agenthead">WebLLM エージェント</h3>
+                {!hasWebGPU && (
+                  <p className="muted">
+                    ⚠ この環境では WebGPU が利用できません。エージェントは動かせませんが、手動ツールで認可フローは体験できます。
+                  </p>
+                )}
+                <div className="row" style={{ marginBottom: 8 }}>
+                  <button onClick={loadModel} disabled={!hasWebGPU || modelLoading || !!engine}>
+                    {engine ? "モデル読込済み" : modelLoading ? "読み込み中…" : "モデルをロード"}
+                  </button>
+                  <span className="muted">{modelStatus}</span>
                 </div>
+                {engine && token && (
+                  <div className="chat">
+                    <div className="messages">
+                      {chat.map((m, i) => (
+                        <div key={i} className={`msg ${m.who}`}>
+                          <div className="who">{m.who}</div>
+                          <pre>{m.text}</pre>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="row">
+                      <input
+                        style={{ flex: 1 }}
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && !agentBusy && sendChat()}
+                        placeholder="例: r1 を読んで / r2 を削除して"
+                      />
+                      <button className="primary" onClick={sendChat} disabled={agentBusy}>
+                        送信
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {engine && !token && <p className="muted">ログインするとエージェントが MCP を呼べます。</p>}
+                </>
               )}
-              {engine && !token && <p className="muted">ログインするとエージェントが MCP を呼べます。</p>}
             </div>
           </div>
         </div>

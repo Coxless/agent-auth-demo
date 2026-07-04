@@ -137,9 +137,6 @@ label { color: var(--muted); font-size: 12px; }
 
 /* ---- Tools ---- */
 .toolgrid { display: flex; flex-direction: column; gap: 10px; }
-.matrix { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
-.matrix th, .matrix td { border: 1px solid var(--border); padding: 5px 8px; text-align: center; }
-.matrix td.role { text-align: left; font-weight: 600; }
 
 /* ---- Sub headings inside a panel ---- */
 .subhead {
