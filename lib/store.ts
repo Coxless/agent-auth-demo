@@ -6,9 +6,12 @@
 // (Authorization codes used to live here too, but are now stateless signed JWTs;
 // see lib/authcode.ts.)
 
+export type Sensitivity = "normal" | "confidential";
+
 export interface RecordItem {
   id: string;
   data: unknown;
+  sensitivity: Sensitivity;
   updatedAt: string;
 }
 
@@ -25,8 +28,24 @@ function stores(): Stores {
   if (!globalThis.__demo_stores__) {
     const records = new Map<string, RecordItem>();
     const now = new Date().toISOString();
-    records.set("r1", { id: "r1", data: { title: "Hello record", note: "seed data" }, updatedAt: now });
-    records.set("r2", { id: "r2", data: { title: "Second record", note: "seed data" }, updatedAt: now });
+    records.set("r1", {
+      id: "r1",
+      data: { title: "Hello record", note: "seed data" },
+      sensitivity: "normal",
+      updatedAt: now,
+    });
+    records.set("r2", {
+      id: "r2",
+      data: { title: "Second record", note: "seed data — classified as confidential" },
+      sensitivity: "confidential",
+      updatedAt: now,
+    });
+    records.set("r3", {
+      id: "r3",
+      data: { title: "Third record", note: "seed data" },
+      sensitivity: "normal",
+      updatedAt: now,
+    });
     globalThis.__demo_stores__ = { records };
   }
   return globalThis.__demo_stores__;
@@ -38,8 +57,16 @@ export function readRecord(id: string): RecordItem | null {
   return stores().records.get(id) ?? null;
 }
 
+/** Sensitivity of a record, or "normal" for one that does not exist yet (new records
+ * are always created as "normal" — only an admin acting directly on the store seed
+ * can classify a record "confidential" in this demo). */
+export function getSensitivity(id: string): Sensitivity {
+  return stores().records.get(id)?.sensitivity ?? "normal";
+}
+
 export function writeRecord(id: string, data: unknown): RecordItem {
-  const item: RecordItem = { id, data, updatedAt: new Date().toISOString() };
+  const sensitivity = getSensitivity(id);
+  const item: RecordItem = { id, data, sensitivity, updatedAt: new Date().toISOString() };
   stores().records.set(id, item);
   return item;
 }

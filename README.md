@@ -31,6 +31,20 @@
 
 すべて架空ユーザーで PII はありません。JWT にも PII は載せません。
 
+上の表はロールだけで決まる**静的**な認可です。これに加えて、`policies/policy.cedar` には
+リクエスト時の情報で結果が変わる**動的**な認可を 2 つ実装しています（同じ role・同じ action でも
+状況によって allow/deny が変わります）。
+
+1. **ABAC（リソース属性ベース）**: レコード `r2` は `sensitivity: "confidential"` として登録されています
+   （`lib/store.ts` の seed データ）。viewer は `r2` を read できず、editor は `r2` を write できません
+   （通常のレコードなら read/write できるのに、です）。判定は `resource.sensitivity` を見て動的に行われます。
+2. **コンテキストベースの一括削除ガード**: `deleteRecord` は `{ id }` または `{ ids: [...] }` で複数指定できますが、
+   1 回の呼び出しで 2 件以上を対象にすると **admin でも常に拒否**されます（`context.targetCount` を見た
+   forbid ポリシー）。誤操作や暴走したエージェントが一度に大量削除するのを防ぐ、爆発半径の制限です。
+
+DB ビューアではレコードごとに sensitivity バッジが表示され、チェックボックスで複数選択して
+「選択レコードを一括削除」を押すと、ガードによる拒否をその場で体験できます。
+
 ## ツールチェーン（mise）
 
 node と bun は [mise](https://mise.jdx.dev/) で管理します（`mise.toml`）。

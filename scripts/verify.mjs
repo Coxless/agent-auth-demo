@@ -108,23 +108,50 @@ async function main() {
   check("#10 AS metadata has token_endpoint + jwks_uri", !!asMeta.token_endpoint && !!asMeta.jwks_uri);
   check("#10 AS supports PKCE S256", (asMeta.code_challenge_methods_supported || []).includes("S256"));
 
-  // Authz matrix per user
+  // Authz matrix per user (baseline role check, record r1 which is sensitivity "normal")
   const matrix = {
     alice: { read: "allow", write: "allow", delete: "allow" }, // admin (#2,#3)
     bob: { read: "allow", write: "allow", delete: "deny" }, // editor (#4,#5)
     carol: { read: "allow", write: "deny", delete: "deny" }, // viewer (#6,#7)
   };
 
+  const tokens = {};
   for (const [user, expect] of Object.entries(matrix)) {
     console.log(`\nUser ${user}:`);
     const token = await getToken(user);
+    tokens[user] = token;
     const r = await callTool(token, "readRecord", { id: "r1" });
-    check(`${user} readRecord => ${expect.read}`, (r.isError ? "deny" : "allow") === expect.read, `isError=${r.isError}`);
+    check(`${user} readRecord(r1) => ${expect.read}`, (r.isError ? "deny" : "allow") === expect.read, `isError=${r.isError}`);
     const w = await callTool(token, "writeRecord", { id: "r1", data: { k: "v" } });
-    check(`${user} writeRecord => ${expect.write}`, (w.isError ? "deny" : "allow") === expect.write, `isError=${w.isError}`);
-    const d = await callTool(token, "deleteRecord", { id: "r2" });
-    check(`${user} deleteRecord => ${expect.delete}`, (d.isError ? "deny" : "allow") === expect.delete, `isError=${d.isError}`);
+    check(`${user} writeRecord(r1) => ${expect.write}`, (w.isError ? "deny" : "allow") === expect.write, `isError=${w.isError}`);
+    // Use r3 (also "normal") for the delete-permission check so r1/r2 survive for the tests below.
+    const d = await callTool(token, "deleteRecord", { id: "r3" });
+    check(`${user} deleteRecord(r3) => ${expect.delete}`, (d.isError ? "deny" : "allow") === expect.delete, `isError=${d.isError}`);
   }
+
+  // Dynamic case #1 — ABAC on resource.sensitivity: r2 is seeded "confidential".
+  // Same role/action as above, different outcome because of the resource's attribute.
+  console.log("\nDynamic ABAC (resource.sensitivity == confidential, record r2):");
+  const rAlice = await callTool(tokens.alice, "readRecord", { id: "r2" });
+  check("alice(admin) readRecord(r2/confidential) => allow", !rAlice.isError, `isError=${rAlice.isError}`);
+  const rBob = await callTool(tokens.bob, "readRecord", { id: "r2" });
+  check("bob(editor) readRecord(r2/confidential) => allow", !rBob.isError, `isError=${rBob.isError}`);
+  const rCarol = await callTool(tokens.carol, "readRecord", { id: "r2" });
+  check("carol(viewer) readRecord(r2/confidential) => deny", rCarol.isError, `isError=${rCarol.isError}`);
+  const wAlice = await callTool(tokens.alice, "writeRecord", { id: "r2", data: { k: "v" } });
+  check("alice(admin) writeRecord(r2/confidential) => allow", !wAlice.isError, `isError=${wAlice.isError}`);
+  const wBob = await callTool(tokens.bob, "writeRecord", { id: "r2", data: { k: "v" } });
+  check("bob(editor) writeRecord(r2/confidential) => deny", wBob.isError, `isError=${wBob.isError}`);
+
+  // Dynamic case #2 — bulk-delete guard via context.targetCount: even admin is denied
+  // when a single call targets more than one record (blast-radius limit).
+  console.log("\nDynamic context guard (deleteRecord with multiple ids):");
+  const bulk = await callTool(tokens.alice, "deleteRecord", { ids: ["r1", "r2"] });
+  check("alice(admin) deleteRecord(ids:[r1,r2]) => deny", bulk.isError, `isError=${bulk.isError}`);
+  const stillR1 = await callTool(tokens.alice, "readRecord", { id: "r1" });
+  check("r1 still exists after denied bulk delete", !stillR1.isError, `isError=${stillR1.isError}`);
+  const single = await callTool(tokens.alice, "deleteRecord", { ids: ["r1"] });
+  check("alice(admin) deleteRecord(ids:[r1]) (single) => allow", !single.isError, `isError=${single.isError}`);
 
   // #8: audience mismatch — mint a token bound to a different resource, expect 401.
   console.log("\nAudience binding:");

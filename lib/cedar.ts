@@ -7,16 +7,22 @@
 
 import { readFileSync } from "fs";
 import path from "path";
-import { isAuthorized, checkParsePolicySet } from "@cedar-policy/cedar-wasm/nodejs";
+import { isAuthorized, checkParsePolicySet, type Context } from "@cedar-policy/cedar-wasm/nodejs";
 
 // Policy text is loaded from policies/policy.cedar at startup, with an inline
 // fallback (kept in sync) so the PDP still works if the file is not bundled.
 const FALLBACK_POLICY = `permit(principal, action == Action::"readRecord", resource)
-when { principal.role == "viewer" || principal.role == "editor" || principal.role == "admin" };
-permit(principal, action == Action::"writeRecord", resource)
 when { principal.role == "editor" || principal.role == "admin" };
+permit(principal, action == Action::"readRecord", resource)
+when { principal.role == "viewer" && resource.sensitivity != "confidential" };
+permit(principal, action == Action::"writeRecord", resource)
+when { principal.role == "admin" };
+permit(principal, action == Action::"writeRecord", resource)
+when { principal.role == "editor" && resource.sensitivity != "confidential" };
 permit(principal, action == Action::"deleteRecord", resource)
-when { principal.role == "admin" };`;
+when { principal.role == "admin" };
+forbid(principal, action == Action::"deleteRecord", resource)
+when { context.targetCount > 1 };`;
 
 function loadPolicyText(): string {
   try {
@@ -54,24 +60,32 @@ export interface CedarDecision {
  * Evaluate one authorization request (spec §6.4 mapping):
  *   principal = User::"<sub>" with attr role
  *   action    = Action::"<toolName>"
- *   resource  = Record::"<id>"
+ *   resource  = Record::"<id>" with attr sensitivity (ABAC, dynamic per-resource)
+ *   context   = request-time facts (e.g. targetCount for the bulk-delete guard)
  */
 export function authorize(input: {
   sub: string;
   role: string;
   action: string;
   resourceId: string;
+  resourceSensitivity?: "normal" | "confidential";
+  context?: Context;
 }): CedarDecision {
   const answer = isAuthorized({
     principal: { type: "User", id: input.sub },
     action: { type: "Action", id: input.action },
     resource: { type: "Record", id: input.resourceId },
-    context: {},
+    context: input.context ?? {},
     policies: { staticPolicies: policyText() },
     entities: [
       {
         uid: { type: "User", id: input.sub },
         attrs: { role: input.role },
+        parents: [],
+      },
+      {
+        uid: { type: "Record", id: input.resourceId },
+        attrs: { sensitivity: input.resourceSensitivity ?? "normal" },
         parents: [],
       },
     ],

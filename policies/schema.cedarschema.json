@@ -10,18 +10,40 @@
         }
       },
       "Record": {
-        "shape": { "type": "Record", "attributes": {} }
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "sensitivity": { "type": "String" }
+          }
+        }
       }
     },
     "actions": {
       "readRecord": {
-        "appliesTo": { "principalTypes": ["User"], "resourceTypes": ["Record"] }
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes": ["Record"],
+          "context": { "type": "Record", "attributes": {} }
+        }
       },
       "writeRecord": {
-        "appliesTo": { "principalTypes": ["User"], "resourceTypes": ["Record"] }
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes": ["Record"],
+          "context": { "type": "Record", "attributes": {} }
+        }
       },
       "deleteRecord": {
-        "appliesTo": { "principalTypes": ["User"], "resourceTypes": ["Record"] }
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes": ["Record"],
+          "context": {
+            "type": "Record",
+            "attributes": {
+              "targetCount": { "type": "Long", "required": false }
+            }
+          }
+        }
       }
     }
   }

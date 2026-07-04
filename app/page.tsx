@@ -26,6 +26,7 @@ interface ChatMsg {
 interface DbRecord {
   id: string;
   data: unknown;
+  sensitivity: "normal" | "confidential";
   updatedAt: string;
 }
 
@@ -57,6 +58,7 @@ export default function Home() {
   const [dbFetchedAt, setDbFetchedAt] = useState<string>("");
   const [dbLoading, setDbLoading] = useState(false);
   const [dbChangedIds, setDbChangedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // WebLLM state
   const [engine, setEngine] = useState<LoadedEngine | null>(null);
@@ -101,6 +103,8 @@ export default function Home() {
     try {
       const res = await fetch("/api/db", { cache: "no-store" });
       const json = (await res.json()) as { records: DbRecord[]; fetchedAt: string };
+      const liveIds = new Set(json.records.map((r) => r.id));
+      setSelectedIds((prev) => new Set([...prev].filter((id) => liveIds.has(id))));
       if (highlightChanges) {
         setDbRecords((prev) => {
           const prevById = new Map(prev.map((r) => [r.id, r]));
@@ -329,6 +333,7 @@ export default function Home() {
             </div>
             <p className="muted dbnote">
               MCP ツールが操作するサーバ側インメモリ DB。ツール実行のたびに自動更新され、変更されたレコードがハイライトされます。
+              チェックボックスで複数選択すると、操作パネルの「選択レコードを一括削除」で動的認可（一括削除ガード）を試せます。
             </p>
             {dbRecords.length === 0 ? (
               <p className="muted">レコードがありません（すべて削除済み、またはサーバ再起動）。</p>
@@ -337,7 +342,22 @@ export default function Home() {
                 {dbRecords.map((r) => (
                   <div key={r.id} className={`dbrow ${dbChangedIds.has(r.id) ? "changed" : ""}`}>
                     <div className="dbrow-head">
-                      <span className="dbid">{r.id}</span>
+                      <span className="dbrow-left">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(r.id)}
+                          onChange={(e) =>
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(r.id);
+                              else next.delete(r.id);
+                              return next;
+                            })
+                          }
+                        />
+                        <span className="dbid">{r.id}</span>
+                        <span className={`sens-badge ${r.sensitivity}`}>{r.sensitivity}</span>
+                      </span>
                       <span className="dbtime">{new Date(r.updatedAt).toLocaleTimeString()}</span>
                     </div>
                     <pre>{JSON.stringify(r.data, null, 2)}</pre>
@@ -399,6 +419,19 @@ export default function Home() {
                     <label>writeRecord data (JSON)</label>
                     <textarea rows={2} value={writeData} onChange={(e) => setWriteData(e.target.value)} />
                   </div>
+                  <div className="row">
+                    <button
+                      className="danger"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => runTool("deleteRecord", { ids: [...selectedIds] })}
+                    >
+                      選択レコードを一括削除 ({selectedIds.size})
+                    </button>
+                    <span className="muted">
+                      DB ビューアでチェックした複数レコードを 1 回の deleteRecord 呼び出しで削除しようとします。
+                      2 件以上は role に関わらず常に拒否されます（動的認可: 一括削除ガード）。
+                    </span>
+                  </div>
                 </div>
                 </>
               )}
@@ -437,7 +470,7 @@ export default function Home() {
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && !agentBusy && sendChat()}
-                        placeholder="例: r1 を読んで / r2 を削除して"
+                        placeholder="例: r2 を読んで（confidential） / r1 と r2 をまとめて削除して"
                       />
                       <button className="primary" onClick={sendChat} disabled={agentBusy}>
                         送信

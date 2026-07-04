@@ -48,8 +48,12 @@ When you have finished and want to answer the user, reply with ONLY:
 
 Rules:
 - Output strictly one JSON object per turn. No markdown, no extra text.
-- Record ids look like "r1", "r2".
-- If a tool returns "403 Forbidden", the current role is not allowed; explain that in your final answer instead of retrying.`;
+- Record ids look like "r1", "r2", "r3". Record "r2" is classified confidential:
+  viewer can never read it, and editor can never write it, even though they can
+  read/write ordinary records.
+- deleteRecord accepts either {"id": "r1"} or {"ids": ["r1","r2"]}, but deleting
+  more than one record in a single call is always denied, even for admin.
+- If a tool returns "403 Forbidden", the current role/request is not allowed; explain that in your final answer instead of retrying.`;
 }
 
 function extractJson(text: string): { tool?: string; args?: Record<string, unknown>; final?: string } | null {

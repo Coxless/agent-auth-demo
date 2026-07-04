@@ -169,6 +169,13 @@ button.mini { padding: 3px 10px; font-size: 12px; border-radius: 6px; }
   margin: 6px 0 0; padding: 8px; background: var(--panel); border-radius: 6px;
   font-size: 12px; white-space: pre-wrap; word-break: break-all;
 }
+.dbrow-left { display: flex; align-items: baseline; gap: 8px; }
+.sens-badge {
+  display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+  border: 1px solid var(--border); color: var(--muted);
+}
+.sens-badge.confidential { color: var(--red); border-color: var(--red); }
 
 /* ---- Chat ---- */
 .chat { display: flex; flex-direction: column; gap: 8px; }
