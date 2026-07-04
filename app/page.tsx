@@ -23,6 +23,12 @@ interface ChatMsg {
   text: string;
 }
 
+interface DbRecord {
+  id: string;
+  data: unknown;
+  updatedAt: string;
+}
+
 const TOKEN_KEY = "access_token";
 
 export default function Home() {
@@ -34,6 +40,12 @@ export default function Home() {
 
   const [recordId, setRecordId] = useState("r1");
   const [writeData, setWriteData] = useState('{"title":"updated","note":"from manual UI"}');
+
+  // DB viewer state
+  const [dbRecords, setDbRecords] = useState<DbRecord[]>([]);
+  const [dbFetchedAt, setDbFetchedAt] = useState<string>("");
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbChangedIds, setDbChangedIds] = useState<Set<string>>(new Set());
 
   // WebLLM state
   const [engine, setEngine] = useState<LoadedEngine | null>(null);
@@ -49,6 +61,39 @@ export default function Home() {
   }, []);
 
   const mcpUrl = () => window.location.origin + "/mcp";
+
+  // --- DB viewer ---
+  const refreshDb = useCallback(async (highlightChanges = false) => {
+    setDbLoading(true);
+    try {
+      const res = await fetch("/api/db", { cache: "no-store" });
+      const json = (await res.json()) as { records: DbRecord[]; fetchedAt: string };
+      if (highlightChanges) {
+        setDbRecords((prev) => {
+          const prevById = new Map(prev.map((r) => [r.id, r]));
+          const changed = new Set<string>();
+          for (const r of json.records) {
+            const old = prevById.get(r.id);
+            if (!old || old.updatedAt !== r.updatedAt) changed.add(r.id);
+          }
+          setDbChangedIds(changed);
+          return json.records;
+        });
+      } else {
+        setDbChangedIds(new Set());
+        setDbRecords(json.records);
+      }
+      setDbFetchedAt(new Date(json.fetchedAt).toLocaleTimeString());
+    } catch {
+      /* ignore: viewer is best-effort */
+    } finally {
+      setDbLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshDb(false);
+  }, [refreshDb]);
 
   // --- token lifecycle ---
   const applyToken = useCallback(
@@ -118,6 +163,8 @@ export default function Home() {
       await callToolLogged(client, name, args, addLog);
     } catch {
       /* logged already */
+    } finally {
+      void refreshDb(true);
     }
   };
 
@@ -146,12 +193,13 @@ export default function Home() {
     setAgentBusy(true);
     const emit = (e: AgentEvent) => {
       if (e.type === "assistant") setChat((c) => [...c, { who: "assistant", text: e.text }]);
-      else if (e.type === "tool")
+      else if (e.type === "tool") {
         setChat((c) => [
           ...c,
           { who: "tool", text: `${e.name}(${JSON.stringify(e.args)}) → ${e.isError ? "⛔ " : "✅ "}${e.result}` },
         ]);
-      else setModelStatus(e.text);
+        void refreshDb(true);
+      } else setModelStatus(e.text);
     };
     try {
       await runAgent(engine, userText, tools, client, emit);
@@ -213,12 +261,44 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right: tools + agent */}
+        {/* Right: DB viewer + operations */}
         <div>
           <div className="panel">
-            <h2>手動ツール実行（フォールバック）</h2>
+            <div className="panelhead">
+              <h2>DB の内容（レコードストア）</h2>
+              <span className="dbmeta">
+                {dbLoading ? "更新中…" : dbFetchedAt ? `取得: ${dbFetchedAt}` : ""}
+                <button className="mini" onClick={() => refreshDb(false)} disabled={dbLoading}>
+                  再読込
+                </button>
+              </span>
+            </div>
+            <p className="muted dbnote">
+              MCP ツールが操作するサーバ側インメモリ DB。ツール実行のたびに自動更新され、変更されたレコードがハイライトされます。
+            </p>
+            {dbRecords.length === 0 ? (
+              <p className="muted">レコードがありません（すべて削除済み、またはサーバ再起動）。</p>
+            ) : (
+              <div className="dbtable">
+                {dbRecords.map((r) => (
+                  <div key={r.id} className={`dbrow ${dbChangedIds.has(r.id) ? "changed" : ""}`}>
+                    <div className="dbrow-head">
+                      <span className="dbid">{r.id}</span>
+                      <span className="dbtime">{new Date(r.updatedAt).toLocaleTimeString()}</span>
+                    </div>
+                    <pre>{JSON.stringify(r.data, null, 2)}</pre>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="panel">
+            <h2>操作パネル（手動ツール / エージェント）</h2>
             {!token && <p className="muted">先にログインしてください。</p>}
             {token && (
+              <>
+              <h3 className="subhead">手動ツール実行（フォールバック）</h3>
               <div className="toolgrid">
                 <div className="row">
                   <label>record id</label>
@@ -263,11 +343,10 @@ export default function Home() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
-          </div>
 
-          <div className="panel">
-            <h2>WebLLM エージェント</h2>
+            <h3 className="subhead agenthead">WebLLM エージェント</h3>
             {!hasWebGPU && (
               <p className="muted">
                 ⚠ この環境では WebGPU が利用できません。エージェントは動かせませんが、上の手動ツールで認可フローは体験できます。

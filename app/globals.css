@@ -107,6 +107,37 @@ label { color: var(--muted); font-size: 12px; }
 .matrix th, .matrix td { border: 1px solid var(--border); padding: 5px 8px; text-align: center; }
 .matrix td.role { text-align: left; font-weight: 600; }
 
+/* ---- Sub headings inside a panel ---- */
+.subhead {
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); margin: 0 0 10px; font-weight: 600;
+}
+.subhead.agenthead { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+/* ---- DB viewer ---- */
+.panelhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.panelhead h2 { margin: 0; }
+.dbmeta { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+.dbnote { margin: 8px 0 12px; font-size: 12px; }
+button.mini { padding: 3px 10px; font-size: 12px; border-radius: 6px; }
+
+.dbtable { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow: auto; }
+.dbrow {
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--bg);
+  transition: border-color 0.4s ease, background 0.4s ease;
+}
+.dbrow.changed { border-color: var(--amber); background: #241f10; }
+.dbrow-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.dbid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700; color: var(--accent);
+}
+.dbtime { color: var(--muted); font-size: 11px; }
+.dbrow pre {
+  margin: 6px 0 0; padding: 8px; background: var(--panel); border-radius: 6px;
+  font-size: 12px; white-space: pre-wrap; word-break: break-all;
+}
+
 /* ---- Chat ---- */
 .chat { display: flex; flex-direction: column; gap: 8px; }
 .messages { max-height: 320px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
