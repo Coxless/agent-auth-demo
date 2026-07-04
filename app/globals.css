@@ -33,21 +33,54 @@ code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, m
 .break { word-break: break-all; }
 
 /* ---- App layout ---- */
-.app { max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px; }
-.app h1 { font-size: 20px; margin: 0 0 4px; }
-.app .sub { color: var(--muted); margin: 0 0 20px; }
+.app {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 14px 18px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app h1 { font-size: 17px; margin: 0 0 2px; }
+.app .sub { color: var(--muted); margin: 0 0 10px; font-size: 12px; }
 
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+/* three-column dashboard that fills the remaining viewport height */
+.grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1.1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+.col { display: flex; flex-direction: column; min-height: 0; gap: 14px; }
+@media (max-width: 1100px) {
+  .app { height: auto; overflow: visible; padding-bottom: 40px; }
+  .grid { grid-template-columns: 1fr; }
+  .col { min-height: 0; }
+}
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
-.panel h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 0 0 12px; }
+@media (max-width: 1100px) {
+  .panel { flex: 0 0 auto; }
+}
+.panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 0 0 10px; flex: 0 0 auto; }
+
+/* scrollable region inside a panel — only this scrolls, header stays put */
+.panel-scroll { flex: 1; min-height: 0; overflow: auto; }
+@media (max-width: 1100px) {
+  .panel-scroll { max-height: 60vh; }
+}
 
 button {
   font: inherit;
@@ -88,7 +121,8 @@ label { color: var(--muted); font-size: 12px; }
 .role-viewer { color: var(--viewer); border-color: var(--viewer); }
 
 /* ---- Flow log ---- */
-.flowlog { max-height: 460px; overflow: auto; }
+.flowlog { flex: 1; min-height: 0; overflow: auto; }
+@media (max-width: 1100px) { .flowlog { max-height: 60vh; } }
 .logentry { border-left: 2px solid var(--border); padding: 6px 10px; margin: 0 0 8px; }
 .logentry.ok { border-color: var(--green); }
 .logentry.err { border-color: var(--red); }
@@ -121,7 +155,8 @@ label { color: var(--muted); font-size: 12px; }
 .dbnote { margin: 8px 0 12px; font-size: 12px; }
 button.mini { padding: 3px 10px; font-size: 12px; border-radius: 6px; }
 
-.dbtable { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow: auto; }
+.dbtable { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: auto; }
+@media (max-width: 1100px) { .dbtable { max-height: 60vh; } }
 .dbrow {
   border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--bg);
   transition: border-color 0.4s ease, background 0.4s ease;
