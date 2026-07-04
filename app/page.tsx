@@ -65,7 +65,25 @@ export default function Home() {
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("r1 を読んで内容を教えて");
   const [agentBusy, setAgentBusy] = useState(false);
-  const hasWebGPU = typeof navigator !== "undefined" && "gpu" in navigator;
+  const [gpuStatus, setGpuStatus] = useState<"checking" | "available" | "unavailable">("checking");
+  const hasWebGPU = gpuStatus === "available";
+
+  useEffect(() => {
+    (async () => {
+      if (typeof navigator === "undefined" || !("gpu" in navigator)) {
+        setGpuStatus("unavailable");
+        return;
+      }
+      try {
+        // "gpu" in navigator only checks that the API exists; a compatible
+        // adapter (real/virtual GPU exposed to the browser) may still be absent.
+        const adapter = await (navigator as unknown as { gpu: { requestAdapter(): Promise<unknown> } }).gpu.requestAdapter();
+        setGpuStatus(adapter ? "available" : "unavailable");
+      } catch {
+        setGpuStatus("unavailable");
+      }
+    })();
+  }, []);
 
   const addLog = useCallback((step: string, status: LogStatus, detail?: unknown) => {
     setLog((prev) => {
@@ -215,13 +233,32 @@ export default function Home() {
           ...c,
           { who: "tool", text: `${e.name}(${JSON.stringify(e.args)}) → ${e.isError ? "⛔ " : "✅ "}${e.result}` },
         ]);
+        addLog(`[エージェント] MCP tools/call: ${e.name}`, "info", e.args);
+        addLog(
+          `   → ${e.name} ${e.isError ? "denied/error (Cedar PDP)" : "allow"}`,
+          e.isError ? "err" : "ok",
+          e.result,
+        );
         void refreshDb(true);
       } else setModelStatus(e.text);
     };
     try {
       await runAgent(engine, userText, tools, client, emit);
     } catch (e) {
-      setChat((c) => [...c, { who: "assistant", text: `エラー: ${String(e)}` }]);
+      const msg = String(e);
+      if (/device was lost|buffer unmapped|devicelosterror/i.test(msg)) {
+        setChat((c) => [
+          ...c,
+          {
+            who: "assistant",
+            text: "エラー: WebGPU デバイスが失われました（メモリ/GPU 制約）。モデルの状態が壊れたためリセットします。「モデルをロード」からやり直してください。",
+          },
+        ]);
+        setEngine(null);
+        setModelStatus("デバイスロストによりリセットされました。再読込してください。");
+      } else {
+        setChat((c) => [...c, { who: "assistant", text: `エラー: ${msg}` }]);
+      }
     } finally {
       setAgentBusy(false);
     }
@@ -369,9 +406,13 @@ export default function Home() {
               {opMode === "agent" && (
                 <>
                 <h3 className="subhead agenthead">WebLLM エージェント</h3>
-                {!hasWebGPU && (
+                {gpuStatus === "checking" && <p className="muted">WebGPU の対応状況を確認中…</p>}
+                {gpuStatus === "unavailable" && (
                   <p className="muted">
-                    ⚠ この環境では WebGPU が利用できません。エージェントは動かせませんが、手動ツールで認可フローは体験できます。
+                    ⚠ この環境では互換 GPU アダプタが見つかりませんでした（WebGPU API はあっても実際に使える GPU がない場合があります）。
+                    エージェントは動かせませんが、手動ツールで認可フローは体験できます。
+                    ブラウザが WebGPU に対応しているか、GPU ドライバ/仮想化環境（WSL2 など）の設定を
+                    <a href="https://webgpureport.org/" target="_blank" rel="noreferrer">webgpureport.org</a> で確認してください。
                   </p>
                 )}
                 <div className="row" style={{ marginBottom: 8 }}>
