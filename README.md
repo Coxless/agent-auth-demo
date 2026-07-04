@@ -33,21 +33,20 @@
 
 ## ツールチェーン（mise）
 
-bun と pnpm は [mise](https://mise.jdx.dev/) で管理します（`mise.toml`）。
+node と bun は [mise](https://mise.jdx.dev/) で管理します（`mise.toml`）。
 
 ```bash
-mise install           # node / bun / pnpm を導入
-mise exec -- pnpm install
+mise install           # node / bun を導入
+mise exec -- bun install
 ```
 
 > 注: この環境では `mise.run` のインストールスクリプトがブロックされていたため mise 自体は
-> `npm i -g mise` で導入しています。pnpm は GitHub の attestation 検証ホストがブロックされていたため
-> mise の **npm バックエンド**（`"npm:pnpm"`）で導入しています。
+> `npm i -g mise` で導入しています。
 
 ## 起動
 
 ```bash
-mise exec -- pnpm dev      # http://localhost:3000
+mise exec -- bun run dev      # http://localhost:3000
 ```
 
 ブラウザで開き「ログイン」を押すと、ディスカバリ → PKCE → token → MCP の各ホップがフローログに出ます。
@@ -70,7 +69,7 @@ curl -i -X POST localhost:3000/mcp     # => 401 + WWW-Authenticate (resource_met
 自動受け入れテスト（サーバ起動中に別ターミナルで）:
 
 ```bash
-BASE_URL=http://localhost:3000 mise exec -- pnpm verify
+BASE_URL=http://localhost:3000 mise exec -- bun run verify
 ```
 
 alice/bob/carol の認可マトリクス（#2〜#7）、`aud` 不一致トークンの拒否（#8）、各 well-known（#1,#10）を検証します。
